@@ -1,4 +1,7 @@
 defmodule CrudApiElixir.Router do
+  require Logger
+  alias CrudApiElixir.JSONUtils, as: JSON
+
   # Bring Plug.Router module into scope
   use Plug.Router
 
@@ -26,10 +29,124 @@ defmodule CrudApiElixir.Router do
   end
 
   get "/knockknock" do
-    case Mongo.command(:mongo, ping: 1) do
+    case Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db") do
       {:ok, _res} -> send_resp(conn, 200, "Who's there?")
       {:error, _err} -> send_resp(conn, 500, "Something went wrong")
     end
+  end
+
+  get "/posts" do
+     {:ok, top} = Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db")
+    posts =
+      Mongo.find(top, "Posts", %{}) # Find all the posts in the database
+      |> Enum.map(&JSON.normaliseMongoId/1) # For each of the post normalise the id
+      |> Enum.to_list() # Convert the records to a list
+      |> Jason.encode!() # Encode the list to a JSON string
+
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, posts) # Send a 200 OK response with the posts in the body
+  end
+
+  post "/post" do
+    {:ok, top} = Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db")
+    %{"name" => name, "content" => content} = conn.body_params
+    Logger.debug "name: #{inspect(name)}"
+    Logger.debug "content: #{inspect(content)}"
+    {:error, error} = Mongo.insert_one(top, "Posts", %{"name" => name, "content" => content})
+    Logger.debug "1st err: #{inspect(error)}"
+
+    {:ok, user} = Mongo.insert_one(top, "Posts", %{"name" => name, "content" => content})
+    Logger.debug "1st user: #{inspect(user)}"
+    case conn.body_params do
+      %{"name" => name, "content" => content} ->
+        case Mongo.insert_one(top, "Posts", %{"name" => name, "content" => content}) do
+          {:ok, user} ->
+            Logger.debug "user: #{inspect(user)}"
+            doc = Mongo.find_one(top, "Posts", %{_id: user.inserted_id})
+            Logger.debug "doc: #{inspect(doc)}"
+            post =
+              JSON.normaliseMongoId(doc)
+              |> Jason.encode!()
+              Logger.debug "post: #{inspect(post)}"
+            conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(200, post)
+
+          {:error, err} ->
+            Logger.debug "err: #{inspect(err)}"
+            send_resp(conn, 500, "Something went wrong")
+        end
+
+      _ ->
+        Logger.debug "ERROR"
+        send_resp(conn, 400, '')
+    end
+  end
+
+  get "/post/:id" do
+    {:ok, top} = Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db")
+    doc = Mongo.find_one(top, "Posts", %{_id: BSON.ObjectId.decode!(id)})
+
+    case doc do
+      nil ->
+        send_resp(conn, 404, "Not Found")
+
+      %{} ->
+        post =
+          JSON.normaliseMongoId(doc)
+          |> Jason.encode!()
+
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, post)
+
+      {:error, _} ->
+        send_resp(conn, 500, "Something went wrong")
+    end
+  end
+
+  put "post/:id" do
+    {:ok, top} = Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db")
+    case Mongo.find_one_and_update(
+           top,
+           "Posts",
+           %{_id: BSON.ObjectId.decode!(id)},
+           %{
+             "$set":
+               conn.body_params
+               |> Map.take(["name", "content"])
+               |> Enum.into(%{}, fn {key, value} -> {"#{key}", value} end)
+           },
+           return_document: :after
+         ) do
+      {:ok, doc} ->
+        case doc do
+          nil ->
+            send_resp(conn, 404, "Not Found")
+
+          _ ->
+            post =
+              JSON.normaliseMongoId(doc)
+              |> Jason.encode!()
+
+            conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(200, post)
+        end
+
+      {:error, _} ->
+        send_resp(conn, 500, "Something went wrong")
+    end
+  end
+
+  delete "post/:id" do
+    {:ok, top} = Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db")
+    Mongo.delete_one!(top, "Posts", %{_id: BSON.ObjectId.decode!(id)})
+
+    conn
+    |> put_resp_content_type("application/json")
+    |> send_resp(200, Jason.encode!(%{id: id}))
   end
 
   # Fallback handler when there was no match
