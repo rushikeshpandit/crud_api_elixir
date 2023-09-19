@@ -10,6 +10,7 @@ defmodule CrudApiElixir.Application do
     children = [
       # Starts a worker by calling: CrudApiElixir.Worker.start_link(arg)
       # {CrudApiElixir.Worker, arg}
+      {Plug.Cowboy, scheme: :http, plug: CrudApiElixir.Router, options: [port: Application.get_env(:crud_api_elixir, :port)]}
     ]
 
     # See https://hexdocs.pm/elixir/Supervisor.html
