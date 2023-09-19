@@ -5,7 +5,8 @@ services:
     container_name: mongodb
     ports:
       - 27017:27017
-    restart: unless-stopped
+    environment:
+      - discovery.type=single-node
     healthcheck:
       test: test $$(echo "rs.initiate({_id:\"rs0\",members:[{_id:0,host:\"localhost:27017\"}]}).ok || rs.status().ok" | mongo --port 27017 --quiet) -eq 1
       interval: 10s
