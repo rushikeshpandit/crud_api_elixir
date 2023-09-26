@@ -74,24 +74,29 @@ defmodule CrudApiElixir.Router do
   end
 
   get "/post/:id" do
-    {:ok, top} = Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db")
-    doc = Mongo.find_one(top, "Posts", %{_id: BSON.ObjectId.decode!(id)})
+    case Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db") do
+      {:ok, top} ->
+        doc = Mongo.find_one(top, "Posts", %{_id: BSON.ObjectId.decode!(id)})
 
-    case doc do
-      nil ->
-        send_resp(conn, 404, "Not Found")
+        case doc do
+          nil ->
+            send_resp(conn, 404, "Not Found")
 
-      %{} ->
-        post =
-          JSON.normaliseMongoId(doc)
-          |> Jason.encode!()
+          %{} ->
+            post =
+              JSON.normaliseMongoId(doc)
+              |> Jason.encode!()
 
-        conn
-        |> put_resp_content_type("application/json")
-        |> send_resp(200, post)
+            conn
+            |> put_resp_content_type("application/json")
+            |> send_resp(200, post)
 
-      {:error, _} ->
-        send_resp(conn, 500, "Something went wrong")
+          {:error, _} ->
+            send_resp(conn, 500, "Something went wrong")
+        end
+      {:error, _err} ->
+        Logger.debug "Connection failed"
+        send_resp(conn, 400, "Something went wrong")
     end
   end
 
