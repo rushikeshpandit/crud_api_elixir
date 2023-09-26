@@ -113,23 +113,21 @@ defmodule CrudApiElixir.Router do
                |> Map.take(["name", "content"])
                |> Enum.into(%{}, fn {key, value} -> {"#{key}", value} end)
            },
-           return_document: :after
-         ) do
-      {:ok, doc} ->
-        case doc do
-          nil ->
-            send_resp(conn, 404, "Not Found")
+           return_document: :after) do
+          {:ok, doc} ->
+            case doc do
+              nil ->
+                send_resp(conn, 404, "Not Found")
 
-          _ ->
-            post =
-              JSON.normaliseMongoId(doc)
-              |> Jason.encode!()
+              _ ->
+                post =
+                  JSON.normaliseMongoId(doc)
+                  |> Jason.encode!()
 
-            conn
-            |> put_resp_content_type("application/json")
-            |> send_resp(200, post)
-        end
-
+                conn
+                |> put_resp_content_type("application/json")
+                |> send_resp(200, post)
+              end
       {:error, _} ->
         send_resp(conn, 500, "Something went wrong")
       end
