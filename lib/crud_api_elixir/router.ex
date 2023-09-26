@@ -49,38 +49,27 @@ defmodule CrudApiElixir.Router do
   end
 
   post "/post" do
-    {:ok, top} = Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db")
-    %{"name" => name, "content" => content} = conn.body_params
-    Logger.debug "name: #{inspect(name)}"
-    Logger.debug "content: #{inspect(content)}"
-    {:error, error} = Mongo.insert_one(top, "Posts", %{"name" => name, "content" => content})
-    Logger.debug "1st err: #{inspect(error)}"
+    case Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db") do
+      {:ok, top} ->
+        Logger.debug "Connection successful"
+        %{"name" => name, "content" => content} = conn.body_params
+        Logger.debug "name: #{inspect(name)}"
+        Logger.debug "content: #{inspect(content)}"
+        Logger.debug "top: #{inspect(top)}"
+        Mongo.insert_one(top, "Posts", %{"name" => name, "content" => content})
 
-    {:ok, user} = Mongo.insert_one(top, "Posts", %{"name" => name, "content" => content})
-    Logger.debug "1st user: #{inspect(user)}"
-    case conn.body_params do
-      %{"name" => name, "content" => content} ->
-        case Mongo.insert_one(top, "Posts", %{"name" => name, "content" => content}) do
-          {:ok, user} ->
-            Logger.debug "user: #{inspect(user)}"
-            doc = Mongo.find_one(top, "Posts", %{_id: user.inserted_id})
-            Logger.debug "doc: #{inspect(doc)}"
-            post =
-              JSON.normaliseMongoId(doc)
-              |> Jason.encode!()
-              Logger.debug "post: #{inspect(post)}"
-            conn
-            |> put_resp_content_type("application/json")
-            |> send_resp(200, post)
+        posts =
+          Mongo.find(top, "Posts", %{}) # Find all the posts in the database
+          |> Enum.map(&JSON.normaliseMongoId/1) # For each of the post normalise the id
+          |> Enum.to_list() # Convert the records to a list
+          |> Jason.encode!() # Encode the list to a JSON string
 
-          {:error, err} ->
-            Logger.debug "err: #{inspect(err)}"
-            send_resp(conn, 500, "Something went wrong")
-        end
-
-      _ ->
-        Logger.debug "ERROR"
-        send_resp(conn, 400, '')
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, posts) # Send a 200 OK response with the posts in the body
+      {:error, _err} ->
+        Logger.debug "Connection failed"
+        send_resp(conn, 400, "Something went wrong")
     end
   end
 
