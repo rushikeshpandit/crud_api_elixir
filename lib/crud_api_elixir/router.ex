@@ -135,12 +135,17 @@ defmodule CrudApiElixir.Router do
   end
 
   delete "post/:id" do
-    {:ok, top} = Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db")
-    Mongo.delete_one!(top, "Posts", %{_id: BSON.ObjectId.decode!(id)})
+    case Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db") do
+      {:ok, top} ->
+        Mongo.delete_one!(top, "Posts", %{_id: BSON.ObjectId.decode!(id)})
 
-    conn
-    |> put_resp_content_type("application/json")
-    |> send_resp(200, Jason.encode!(%{id: id}))
+        conn
+        |> put_resp_content_type("application/json")
+        |> send_resp(200, Jason.encode!(%{id: id}))
+      {:error, _err} ->
+        Logger.debug "Connection failed"
+        send_resp(conn, 400, "Something went wrong")
+    end
   end
 
   # Fallback handler when there was no match
