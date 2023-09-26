@@ -101,8 +101,9 @@ defmodule CrudApiElixir.Router do
   end
 
   put "post/:id" do
-    {:ok, top} = Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db")
-    case Mongo.find_one_and_update(
+    case Mongo.start_link(url: "mongodb://localhost:27017/crud_api_elixir_db") do
+      {:ok, top} ->
+        case Mongo.find_one_and_update(
            top,
            "Posts",
            %{_id: BSON.ObjectId.decode!(id)},
@@ -131,6 +132,7 @@ defmodule CrudApiElixir.Router do
 
       {:error, _} ->
         send_resp(conn, 500, "Something went wrong")
+      end
     end
   end
 
