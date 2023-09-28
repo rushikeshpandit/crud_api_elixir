@@ -54,7 +54,7 @@ defmodule CrudApiElixirTest.Router do
 
       # Make an API to call create a post
       conn = conn(:post, "/post", %{name: "Post 1", content: "Content of post"})
-      conn = RestApi.Router.call(conn, @opts)
+      conn = CrudApiElixir.Router.call(conn, @opts)
 
       # Checking that request was actually sent
       assert conn.state == :sent
@@ -92,7 +92,7 @@ defmodule CrudApiElixirTest.Router do
     createPosts()
 
     conn = conn(:get, "/posts")
-    conn = RestApi.Router.call(conn, @opts)
+    conn = CrudApiElixir.Router.call(conn, @opts)
 
     assert conn.state == :sent
     assert conn.status == 200
@@ -116,7 +116,7 @@ defmodule CrudApiElixirTest.Router do
     [id | _] = createPosts() # using pattern matching to get the first id
 
     conn = conn(:get, "/post/#{id}") # string interpolation
-    conn = RestApi.Router.call(conn, @opts)
+    conn = CrudApiElixir.Router.call(conn, @opts)
 
     assert conn.state == :sent
     assert conn.status == 200
@@ -132,7 +132,7 @@ defmodule CrudApiElixirTest.Router do
     [id | _] = createPosts()
 
     conn = conn(:put, "/post/#{id}", %{content: "Content 3"})
-    conn = RestApi.Router.call(conn, @opts)
+    conn = CrudApiElixir.Router.call(conn, @opts)
 
     assert conn.state == :sent
     assert conn.status == 200
@@ -150,7 +150,7 @@ defmodule CrudApiElixirTest.Router do
     assert Mongo.find(:mongo, "Posts", %{}) |> Enum.count == 2
 
     conn = conn(:delete, "/post/#{id}", %{content: "Content 3"})
-    conn = RestApi.Router.call(conn, @opts)
+    conn = CrudApiElixir.Router.call(conn, @opts)
 
     assert conn.state == :sent
     assert conn.status == 200
