@@ -2,7 +2,7 @@ defmodule CrudApiElixirTest.Router do
   # Bringing ExUnit's case module to scope and configure it to run
   # tests in this module concurrently with tests in other modules
   # https://hexdocs.pm/ex_unit/ExUnit.Case.html
-  use ExUnit.Case, async: true
+  use ExUnit.Case
 
   # This makes the conn object avaiable in the scope of the tests,
   # which can be used to make the HTTP request
