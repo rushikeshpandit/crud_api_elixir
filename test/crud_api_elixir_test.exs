@@ -46,6 +46,7 @@ defmodule CrudApiElixirTest.Router do
     		fn col -> Mongo.delete_many!(:mongo, col, %{})
     	end)
       end
+    end
   end
 
   test "POST /post should return ok" do
